@@ -10,10 +10,10 @@ interface WeatherData {
 
 export default function Dashboard() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [isClient, setIsClient] = useState(false); // ✅ Track client-side rendering
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // ✅ Mark that we're on the client
+    setIsClient(true);
 
     const fetchWeather = async () => {
       try {
