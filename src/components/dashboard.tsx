@@ -10,41 +10,38 @@ interface WeatherData {
 
 export default function Dashboard() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-
-  const fetchWeather = async () => {
-    try {
-      const response = await fetch("http://localhost:8000/api/predict/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          temperature: 25,
-          humidity: 60,
-          wind_speed: 12,
-          pressure_mb: 1013,
-          cloud: 75,
-          air_quality_PM2_5: 8.4,
-        }),
-      });
-
-      const data = await response.json();
-
-      // Check for API error responses
-      if (response.status !== 200) {
-        throw new Error(data.error || "Unknown API error");
-      }
-
-      setWeather(data);
-    } catch (error: any) {
-      console.error("API Error:", error.message);
-      setWeather({ error: error.message || "Failed to fetch weather data." });
-    }
-  };
+  const [isClient, setIsClient] = useState(false); // ✅ Track client-side rendering
 
   useEffect(() => {
+    setIsClient(true); // ✅ Mark that we're on the client
+
+    const fetchWeather = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/predict/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            temperature: 25,
+            humidity: 60,
+            wind_speed: 12,
+            pressure_mb: 1013,
+            cloud: 75,
+            air_quality_PM2_5: 8.4,
+          }),
+        });
+
+        const data = await response.json();
+        setWeather(data);
+      } catch (error) {
+        console.error("API Error:", error);
+        setWeather({ error: "Failed to fetch weather data." });
+      }
+    };
+
     fetchWeather();
-    const interval = setInterval(fetchWeather, 300000);
-    return () => clearInterval(interval);
   }, []);
+
+  if (!isClient) return null; // ✅ Prevent SSR mismatches
 
   return (
     <motion.div
