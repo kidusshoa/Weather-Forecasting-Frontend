@@ -1,6 +1,11 @@
-import Dashboard from "@/components/dashboard";
-import ForecastChart from "@/components/forecastChart";
-import MapView from "@/components/mapView";
+"use client";
+import dynamic from "next/dynamic";
+import Dashboard from "../components/dashboard";
+
+const MapView = dynamic(() => import("../components/mapView"), { ssr: false });
+const ForecastChart = dynamic(() => import("../components/forecastChart"), {
+  ssr: false,
+});
 
 export default function Home() {
   return (

@@ -4,27 +4,40 @@ import { motion } from "framer-motion";
 import { WiRain } from "react-icons/wi";
 
 interface WeatherData {
-  predicted_precipitation: number;
+  predicted_precipitation?: number;
+  error?: string;
 }
 
 export default function Dashboard() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
   const fetchWeather = async () => {
-    const response = await fetch("http://localhost:8000/api/predict/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        temperature: 25,
-        humidity: 60,
-        wind_speed: 12,
-        pressure_mb: 1013,
-        cloud: 75,
-        air_quality_PM2_5: 8.4,
-      }),
-    });
-    const data = await response.json();
-    setWeather(data);
+    try {
+      const response = await fetch("http://localhost:8000/api/predict/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          temperature: 25,
+          humidity: 60,
+          wind_speed: 12,
+          pressure_mb: 1013,
+          cloud: 75,
+          air_quality_PM2_5: 8.4,
+        }),
+      });
+
+      const data = await response.json();
+
+      // Check for API error responses
+      if (response.status !== 200) {
+        throw new Error(data.error || "Unknown API error");
+      }
+
+      setWeather(data);
+    } catch (error: any) {
+      console.error("API Error:", error.message);
+      setWeather({ error: error.message || "Failed to fetch weather data." });
+    }
   };
 
   useEffect(() => {
@@ -43,7 +56,10 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold flex items-center gap-2">
         <WiRain size={30} /> Real-Time Weather Dashboard
       </h1>
-      {weather ? (
+
+      {weather?.error ? (
+        <p className="text-red-500 mt-4">Error: {weather.error}</p>
+      ) : weather?.predicted_precipitation !== undefined ? (
         <p className="mt-4 text-xl">
           Predicted Precipitation:{" "}
           <span className="font-semibold">

@@ -34,12 +34,14 @@ export default function ForecastChart() {
           dataKey="temp"
           stroke="#8884d8"
           name="Temperature (°C)"
+          isAnimationActive={false}
         />
         <Line
           type="monotone"
           dataKey="precipitation"
           stroke="#82ca9d"
           name="Precipitation (mm)"
+          isAnimationActive={false}
         />
       </LineChart>
     </div>
