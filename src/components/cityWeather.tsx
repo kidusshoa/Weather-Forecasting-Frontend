@@ -9,19 +9,16 @@ import {
 import L, { LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fixing missing marker icons issue
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
-// Setting default marker icons
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
 });
 
-// ✅ Type Definitions
 interface GeoName {
   geonameId: number;
   name: string;
