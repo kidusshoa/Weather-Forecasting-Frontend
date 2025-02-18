@@ -1,120 +1,156 @@
+"use client";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { create } from "zustand";
+import {
+  Thermometer,
+  Droplets,
+  Wind,
+  Gauge,
+  Cloud,
+  Sunrise,
+  CloudRain,
+} from "lucide-react";
 
-interface WeatherData {
-  city: string;
+interface WeatherStore {
+  formData: WeatherInput;
+  setFormData: (data: Partial<WeatherInput>) => void;
+}
+const useWeatherStore = create<WeatherStore>((set) => ({
+  formData: {
+    temperature: 25,
+    humidity: 60,
+    wind_speed: 12,
+    pressure_mb: 1013,
+    cloud: 75,
+    air_quality_PM2_5: 8.4,
+  },
+  setFormData: (data) =>
+    set((state) => ({ formData: { ...state.formData, ...data } })),
+}));
+
+// ✅ Type Definition for Form Inputs
+interface WeatherInput {
   temperature: number;
   humidity: number;
   wind_speed: number;
   pressure_mb: number;
   cloud: number;
   air_quality_PM2_5: number;
-  predicted_precipitation?: number;
 }
 
-const sampleData: Record<string, Omit<WeatherData, "city">> = {
-  Hawassa: {
-    temperature: 22,
-    humidity: 70,
-    wind_speed: 10,
-    pressure_mb: 1012,
-    cloud: 60,
-    air_quality_PM2_5: 5.2,
-  },
-  "Dire Dawa": {
-    temperature: 30,
-    humidity: 50,
-    wind_speed: 15,
-    pressure_mb: 1008,
-    cloud: 20,
-    air_quality_PM2_5: 8.9,
-  },
-  Adama: {
-    temperature: 27,
-    humidity: 55,
-    wind_speed: 12,
-    pressure_mb: 1010,
-    cloud: 35,
-    air_quality_PM2_5: 6.4,
-  },
-  "Bahir Dar": {
-    temperature: 24,
-    humidity: 65,
-    wind_speed: 8,
-    pressure_mb: 1013,
-    cloud: 50,
-    air_quality_PM2_5: 4.8,
-  },
+const predictWeather = async (input: WeatherInput) => {
+  const response = await fetch("http://localhost:8000/api/predict/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) throw new Error("Prediction failed");
+  return response.json();
 };
 
-export default function CityWeatherForm() {
-  const [city, setCity] = useState("Hawassa");
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+export default function WeatherForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<WeatherInput>();
+  const { formData, setFormData } = useWeatherStore();
+  const [prediction, setPrediction] = useState<number | null>(null);
 
-  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCity(e.target.value);
-  };
+  const mutation = useMutation({
+    mutationFn: predictWeather,
+    onSuccess: (data) => setPrediction(data.predicted_precipitation),
+    onError: () => setPrediction(null),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const selectedWeather = sampleData[city];
-
-    const response = await fetch("http://localhost:8000/api/predict/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ city, ...selectedWeather }),
-    });
-
-    const result = await response.json();
-    setWeather({
-      city,
-      ...selectedWeather,
-      predicted_precipitation: result.predicted_precipitation,
-    });
+  const onSubmit = (data: WeatherInput) => {
+    setFormData(data);
+    mutation.mutate(data);
   };
 
   return (
-    <div className="p-4 max-w-lg mx-auto border rounded-md shadow-md bg-white text-gray-900">
-      <h2 className="text-xl font-semibold mb-4">City Weather Prediction</h2>
-      <form onSubmit={handleSubmit}>
-        <label className="block mb-2 font-medium">Select City:</label>
-        <select
-          value={city}
-          onChange={handleCityChange}
-          className="border p-2 w-full rounded-md"
-        >
-          {Object.keys(sampleData).map((cityName) => (
-            <option key={cityName} value={cityName}>
-              {cityName}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="mt-4 w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600"
-        >
-          Predict Weather
-        </button>
-      </form>
-
-      {weather && (
-        <div className="mt-4 p-4 bg-gray-100 rounded-md">
-          <h3 className="text-lg font-semibold">
-            Prediction for {weather.city}
-          </h3>
-          <p>Temperature: {weather.temperature}°C</p>
-          <p>Humidity: {weather.humidity}%</p>
-          <p>Wind Speed: {weather.wind_speed} km/h</p>
-          <p>Pressure: {weather.pressure_mb} mb</p>
-          <p>Cloud Cover: {weather.cloud}%</p>
-          <p>Air Quality (PM2.5): {weather.air_quality_PM2_5} μg/m³</p>
-          <p className="font-semibold text-blue-600">
-            Predicted Precipitation:{" "}
-            {weather.predicted_precipitation?.toFixed(2)} mm
-          </p>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-8"
+      >
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-xl text-white flex items-center gap-3">
+          <CloudRain className="h-8 w-8" />
+          <h1 className="text-3xl font-bold">Weather Prediction</h1>
         </div>
-      )}
+
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
+          {Object.entries(formData).map(([key, value]) => (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="p-4 bg-gray-200 rounded-lg flex items-center gap-4"
+            >
+              <div className="text-3xl text-gray-700">
+                {key === "temperature" && <Thermometer />}
+                {key === "humidity" && <Droplets />}
+                {key === "wind_speed" && <Wind />}
+                {key === "pressure_mb" && <Gauge />}
+                {key === "cloud" && <Cloud />}
+                {key === "air_quality_PM2_5" && <Sunrise />}
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-gray-700 font-semibold capitalize">
+                  {key.replace(/_/g, " ")}
+                </label>
+                <input
+                  type="number"
+                  {...register(key as keyof WeatherInput, {
+                    required: true,
+                    valueAsNumber: true,
+                  })}
+                  defaultValue={value}
+                  className="w-full mt-1 p-2 border rounded-md text-gray-900"
+                />
+                {errors[key as keyof WeatherInput] && (
+                  <p className="text-red-500 text-sm mt-1">Required field</p>
+                )}
+              </div>
+            </motion.div>
+          ))}
+
+          <div className="col-span-2 flex justify-center">
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition"
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? "Predicting..." : "Predict Weather"}
+            </button>
+          </div>
+        </form>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="p-6 mt-6 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl text-center"
+        >
+          {prediction !== null ? (
+            <p className="text-2xl font-bold">
+              Predicted Precipitation: {prediction.toFixed(2)} mm
+            </p>
+          ) : (
+            <p className="text-lg">Enter values and click Predict.</p>
+          )}
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
