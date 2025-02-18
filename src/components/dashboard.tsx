@@ -1,107 +1,127 @@
-import { useEffect, useState } from "react";
+"use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
+  CloudRain,
   Cloud,
   Droplets,
   Wind,
   Gauge,
   Thermometer,
-  CloudRain,
   Sunrise,
 } from "lucide-react";
 
-interface WeatherData {
-  predicted_precipitation?: number;
-  error?: string;
-}
+type CityName =
+  | "Addis Ababa"
+  | "Hawassa"
+  | "Dire Dawa"
+  | "Adama"
+  | "Bahir Dar"
+  | "Gondar"
+  | "Mekelle"
+  | "Jimma";
 
-interface WeatherParam {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  unit: string;
-  color: string;
-}
+const cityWeatherData: Record<
+  CityName,
+  {
+    temperature: number;
+    humidity: number;
+    wind_speed: number;
+    pressure_mb: number;
+    cloud: number;
+    air_quality_PM2_5: number;
+  }
+> = {
+  "Addis Ababa": {
+    temperature: 22,
+    humidity: 65,
+    wind_speed: 9,
+    pressure_mb: 1016,
+    cloud: 70,
+    air_quality_PM2_5: 7.8,
+  },
+  Hawassa: {
+    temperature: 26,
+    humidity: 55,
+    wind_speed: 10,
+    pressure_mb: 1015,
+    cloud: 65,
+    air_quality_PM2_5: 7.2,
+  },
+  "Dire Dawa": {
+    temperature: 30,
+    humidity: 40,
+    wind_speed: 15,
+    pressure_mb: 1008,
+    cloud: 30,
+    air_quality_PM2_5: 6.8,
+  },
+  Adama: {
+    temperature: 27,
+    humidity: 50,
+    wind_speed: 12,
+    pressure_mb: 1012,
+    cloud: 55,
+    air_quality_PM2_5: 8.1,
+  },
+  "Bahir Dar": {
+    temperature: 24,
+    humidity: 60,
+    wind_speed: 8,
+    pressure_mb: 1014,
+    cloud: 75,
+    air_quality_PM2_5: 7.5,
+  },
+  Gondar: {
+    temperature: 20,
+    humidity: 70,
+    wind_speed: 7,
+    pressure_mb: 1017,
+    cloud: 80,
+    air_quality_PM2_5: 6.9,
+  },
+  Mekelle: {
+    temperature: 28,
+    humidity: 45,
+    wind_speed: 13,
+    pressure_mb: 1010,
+    cloud: 40,
+    air_quality_PM2_5: 7.0,
+  },
+  Jimma: {
+    temperature: 25,
+    humidity: 68,
+    wind_speed: 9,
+    pressure_mb: 1013,
+    cloud: 72,
+    air_quality_PM2_5: 8.3,
+  },
+};
 
 export default function Dashboard() {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<CityName>("Addis Ababa");
+  const [weather, setWeather] = useState<number | null>(null);
+  const cityData = cityWeatherData[selectedCity];
 
-  const weatherParams: WeatherParam[] = [
-    {
-      icon: <Thermometer className="h-6 w-6" />,
-      label: "Temperature",
-      value: 25,
-      unit: "°C",
-      color: "from-orange-400 to-red-400",
-    },
-    {
-      icon: <Droplets className="h-6 w-6" />,
-      label: "Humidity",
-      value: 60,
-      unit: "%",
-      color: "from-blue-400 to-cyan-400",
-    },
-    {
-      icon: <Wind className="h-6 w-6" />,
-      label: "Wind Speed",
-      value: 12,
-      unit: "km/h",
-      color: "from-teal-400 to-emerald-400",
-    },
-    {
-      icon: <Gauge className="h-6 w-6" />,
-      label: "Pressure",
-      value: 1013,
-      unit: "mb",
-      color: "from-purple-400 to-indigo-400",
-    },
-    {
-      icon: <Cloud className="h-6 w-6" />,
-      label: "Cloud Cover",
-      value: 75,
-      unit: "%",
-      color: "from-gray-400 to-slate-400",
-    },
-    {
-      icon: <Sunrise className="h-6 w-6" />,
-      label: "Air Quality",
-      value: 8.4,
-      unit: "PM2.5",
-      color: "from-green-400 to-lime-400",
-    },
-  ];
+  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCity(e.target.value as CityName);
+    setWeather(null);
+  };
 
-  useEffect(() => {
-    setIsClient(true);
+  const fetchWeatherPrediction = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/predict/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city: selectedCity, ...cityData }),
+      });
 
-    const fetchWeather = async () => {
-      try {
-        const response = await fetch("http://localhost:8000/api/predict/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            temperature: 25,
-            humidity: 60,
-            wind_speed: 12,
-            pressure_mb: 1013,
-            cloud: 75,
-            air_quality_PM2_5: 8.4,
-          }),
-        });
-
-        const data = await response.json();
-        setWeather(data);
-      } catch (error) {
-        console.error("API Error:", error);
-        setWeather({ error: "Failed to fetch weather data." });
-      }
-    };
-
-    fetchWeather();
-  }, []);
-
-  if (!isClient) return null;
+      const data = await response.json();
+      setWeather(data.predicted_precipitation);
+    } catch (error) {
+      console.error("API Error:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -109,7 +129,7 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="max-w-6xl mx-auto"
+        className="max-w-4xl mx-auto"
       >
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8">
@@ -117,43 +137,69 @@ export default function Dashboard() {
               <CloudRain className="h-8 w-8" />
               Weather Dashboard
             </h1>
-
-            <div className="mt-6 bg-white/10 rounded-2xl p-6 backdrop-blur-sm">
-              {weather?.error ? (
-                <p className="text-red-200">Error: {weather.error}</p>
-              ) : weather?.predicted_precipitation !== undefined ? (
-                <div>
-                  <p className="text-white/70">Predicted Precipitation</p>
-                  <p className="text-4xl font-bold text-white mt-2">
-                    {weather.predicted_precipitation.toFixed(2)} mm
-                  </p>
-                </div>
-              ) : (
-                <div className="animate-pulse bg-white/20 h-16 rounded-xl" />
-              )}
-            </div>
           </div>
 
-          <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {weatherParams.map((param, index) => (
+          <div className="p-6">
+            <label className="block text-gray-700 text-lg font-semibold">
+              Select a City
+            </label>
+            <select
+              value={selectedCity}
+              onChange={handleCityChange}
+              className="w-full p-2 border rounded-md text-gray-900"
+            >
+              {Object.keys(cityWeatherData).map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(cityData).map(([key, value]) => (
               <motion.div
-                key={param.label}
+                key={key}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className={`bg-gradient-to-br ${param.color} p-6 rounded-2xl text-white shadow-lg`}
+                transition={{ duration: 0.5 }}
+                className="p-4 bg-gray-200 rounded-lg flex items-center gap-4"
               >
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 p-3 rounded-xl">{param.icon}</div>
-                  <div>
-                    <p className="text-sm text-white/70">{param.label}</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {param.value} {param.unit}
-                    </p>
-                  </div>
+                <div className="text-3xl text-gray-700">
+                  {key === "temperature" && <Thermometer />}
+                  {key === "humidity" && <Droplets />}
+                  {key === "wind_speed" && <Wind />}
+                  {key === "pressure_mb" && <Gauge />}
+                  {key === "cloud" && <Cloud />}
+                  {key === "air_quality_PM2_5" && <Sunrise />}
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-semibold capitalize">
+                    {key.replace(/_/g, " ")}
+                  </label>
+                  <p className="text-xl font-bold text-gray-900">{value}</p>
                 </div>
               </motion.div>
             ))}
+          </div>
+
+          <div className="p-6 flex justify-center">
+            <button
+              onClick={fetchWeatherPrediction}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition"
+            >
+              Predict Weather
+            </button>
+          </div>
+
+          <div className="p-6 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl text-center">
+            {weather !== null ? (
+              <p className="text-2xl font-bold">
+                Predicted Precipitation: {weather.toFixed(2)} mm
+              </p>
+            ) : (
+              <p className="text-lg">Select a city and click Predict.</p>
+            )}
           </div>
         </div>
       </motion.div>
